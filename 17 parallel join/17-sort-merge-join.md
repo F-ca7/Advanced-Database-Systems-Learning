@@ -53,13 +53,14 @@
      为什么不能直接在一个寄存器内排序？——单个排序网络中的数据都来自不同寄存器，可通过SIMD来加速排序；**这里4个寄存器可视为4个SIMD向量**
 
 4. Bitonic Merge Network: 双调合并网络——In-Cache
-   - 由于有SIMD，缓存内排序使用**多级二路归并**: 每一次把两个有序的数组，合并为一个**全局有序**的数组
-
+   
+- 由于有SIMD，缓存内排序使用**多级二路归并**: 每一次把两个有序的数组，合并为一个**全局有序**的数组
+   
 5. Multi-Way Merging: 多路合并——Out-of-Cache
    - 比起二路归并，**减少了内存读写**
    - 每次排序块能填满CPU缓存，避免频繁切换任务的开销
 
-6. 想起上一节的基于Hash的连接，hash得到结果会随机访问内存，引起缓存命中率低的问题(如果hash table大于cache，几乎每次访问都会造成cahce miss)——通过**partition**的hash join
+6. 想起上一节的基于Hash的联接，hash得到结果会随机访问内存，引起缓存命中率低的问题(如果hash table大于cache，几乎每次访问都会造成cahce miss)——通过**partition**的hash join
 7. Merge阶段：多核情况下，若有各自的输出缓冲区，可以不需要同步并行完成
 8. Sort-Merge的变种：
    - Multi-Way
