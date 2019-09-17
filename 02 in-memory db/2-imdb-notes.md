@@ -8,7 +8,7 @@
 
    - 当一个查询想访问一个page P (通过一个Page Table查询得到)时，DBMS先检查P是否在缓存池中：若不在，则DBMS从磁盘中取出页面P，并复制P放在缓冲池的一帧(frame)中 —> 若无空的frame，则按一定的替换原则evict一个在缓存池的page (此时应该还要更新page table，原PPT中没提到) —> 若该page是dirty(被修改过)，则要将对应修改后的内容写回磁盘；未修改过就不用管。 <!-- 以上和操作系统中页面调度的过程基本一样-->
 
-   - 需要设置lock(锁)和latch(闩锁)来为txns(transactions)保证ACID，二者区别:
+   - 需要设置lock(锁)和latch(闩锁)来为txns(transactions)保证ACID，二者区别: (参考[B-tree Locking](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/B-tree-locking.md))
 
      | 作用 | Locks                             | Latches                          |
      | ---- | --------------------------------- | -------------------------------- |
