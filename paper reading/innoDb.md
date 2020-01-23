@@ -16,7 +16,7 @@
    - 支持外键
    - 非锁定读(默认读取不会产生锁)
    - 使用多版本并发控制(MVCC), 使用next-key locking 避免幻读
-   - 插入缓冲(insert buffer)、二次写(double write)、自适应哈希索引(adaptive hash index)、预读(read ahead)
+   - 插入缓冲(insert buffer) => **性能提升**、二次写(double write) => 数据页的**可靠性**、自适应哈希索引(adaptive hash index)、预读(read ahead)
    - 采用聚集(cluster)的方式存储数据; 每张表的存储都按主键顺序进行存放(没有主键时, 会为每行生成一个6byte的ROWID作为主键)
    - InnoDb更适合OLTP, MyISAM更适合OLAP
 
@@ -78,7 +78,7 @@
    
    - 引入参数innodb_adaptive_flushing，影响每秒刷新脏页的数量。原本刷新规则是——当脏页在缓冲池的比例小于innodb_max_dirty_pages_pct时，不刷新脏页；大于时，刷新100个脏页。现在是——通过判断redo log的速度来决定最合适的刷新脏页数量。
    
-     注: innodb事务日志包括redo log和undo log。redo log是重做日志，提供前滚操作；undo log是回滚日志，提供回滚操作。Redo log写入磁盘时，必须进行一次操作系统fsync操作，防止redo log只是写入操作系统磁盘缓存中。一般情况下，对硬盘件的write操作，更新的只是内存中的页缓存，而脏页面不会立即更新到硬盘中。
+     注: innodb事务日志包括redo log和undo log。redo log是重做日志，提供前滚操作；undo log是回滚日志，提供回滚操作。Redo log写入磁盘时，必须进行一次操作系统fsync操作，防止redo log只是写入操作系统磁盘缓存中。一般情况下，对硬盘的write操作，更新的只是内存中的页缓存，而脏页面不会立即更新到硬盘中。
    
      The [redo log](https://dev.mysql.com/doc/refman/5.5/en/innodb-redo-log.html) is a disk-based data structure used during crash recovery to correct data written by incomplete transactions. During normal operations, the redo log encodes requests to change table data that result from SQL statements or low-level API calls. Modifications that did not finish updating the data files before an unexpected shutdown are replayed automatically during initialization, and before the connections are accepted.
    
@@ -99,4 +99,19 @@
      其**非叶结点**存放的是查询的search key。search key的属性包括4字节的space，表示待插入记录所在表的表id(每张表有一个唯一的space id)；1字节的marker，兼容作用；4字节的offset，表示页所在的偏移量。
 
      当一个secondary index要插入到page(space_id, offset)时，如果该page不在缓冲池中，则会先构造一个search key，再查询Insert Buffer B+树，再将该条record插入到树的叶子结点中。
+
+8. double write：（有些文件系统本身就提供了部分写失效的防范机制，就不需要开启double write）
+
+   - 部分写失效 partial page write: 正在写入某个页到表中，比如16KB的页只写了前4KB，就发生了宕机，则会导致数据丢失
+
+   - double write的两部分——**内存中**的double write buffer和**磁盘上**共享表空间中连续的128个page。（连续空间 => 顺序写 => 效率高）
+
+     - 共享表空间：InnoDB的所有数据保存在一个单独的表空间里面，而这个表空间可以由很多个文件组成，一个表可以跨多个文件存在，所以其大小限制不再是文件大小的限制（**优点**），而是其自身的限制。
+     - 独立表空间：每一个表都将会生成以独立的文件方式来进行存储，每一个表都有一个.frm表描述(结构)文件，还有一个.ibd文件。
+
+     当要刷新脏页时，不直接写磁盘；通过**memcpy**函数将脏页复制到内存中的double write buffer，之后通过double write buffer再分2次，每次写入1MB到共享表空间doublewirte中，然后马上调用fsync函数，同步到磁盘上。
+
+     如果写入磁盘时崩溃，可以从共享表空间中的doublewirte中找到该page的副本，将其复制到表空间文件，再应用重做日志。
+
+9. 自适应哈希索引 AHI：
 
