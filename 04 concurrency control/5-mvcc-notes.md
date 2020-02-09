@@ -156,7 +156,13 @@
 
  - 使用[混合存储layout](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/Flexible-Storage-Model.md)（行+列式）
 
+   **版本存储**：
    
+- 在main table中存储最老的版本
+
+- 每一个元组维护一个 flag 来标记是否有newer version
+
+- 通过一个 hash 表，key为**record的identifier**，value为**版本链的头结点**。
 
 12. 
 
