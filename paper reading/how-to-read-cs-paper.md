@@ -44,7 +44,9 @@
    - 方法是否合理？
    - 方法是否客观？
 
-3. > Computer science papers are often written in English by non-native speakers of English. Syntactic errors or awkwardness of phrasing do not indicate that the research is bad; you should try distinguish between the writing style and the research itself. 
+3. 语言问题
+
+> Computer science papers are often written in English by non-native speakers of English. Syntactic errors or awkwardness of phrasing do not indicate that the research is bad; you should try distinguish between the writing style and the research itself. 
 
 ----
 
