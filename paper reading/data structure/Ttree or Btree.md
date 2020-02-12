@@ -1,8 +1,8 @@
 ## T-Tree or B-Tree: Main Memory Database Index Structure Revisited
 
-1. 问题：T树被广泛认为是适合 内存型数据库的索引结构，但是大多数研究没有考虑**并发控制**concurrency control.
+1. **问题**：T树被广泛认为是适合 内存型数据库的索引结构，但是大多数研究没有考虑**并发控制**concurrency control.
 
-2. 结论：当使用并发控制时，B树的变种——B链树 B-link Tree 比T树表现得更好。因为T树需要的锁操作更多，而上锁和解锁的代价很高。
+2. **结论**：当使用并发控制时，B树的变种——B链树 B-link Tree 比T树表现得更好。因为T树需要的锁操作更多，而上锁和解锁的代价很高。
 
 3. [B-link Tree](https://sciencedirect.xilesou.top/science/article/pii/0022000086900218/pdf?md5=fafabf86d6f6aced3c490eacb5d30d46&pid=1-s2.0-0022000086900218-main.pdf&_valck=1): 
 
