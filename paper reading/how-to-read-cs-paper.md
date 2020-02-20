@@ -99,3 +99,11 @@
 [Whitesides’ Group: Writing a Paper](http://www.che.iitm.ac.in/misc/dd/writepaper.pdf)
 
 [Research Skills](http://research.microsoft.com/simonpj/Papers/givinga-talk/giving-a-talk.htm)
+
+-----
+
+### 三大顶会
+
+1. **[SIGMOD](http://www.sigmod.org/)**（Special Interest Group On Management Of Data）——美国计算机协会ACM
+2. **[VLDB](http://www.vldb.org/)**（Very Large Data Base）——欧洲的数据库会议
+3. **[ICDE](http://www.icde.org/)**（International Conference On Data Engineering）——IEEE的数据库会议
