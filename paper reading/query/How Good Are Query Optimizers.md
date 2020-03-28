@@ -37,24 +37,23 @@
      在实验中，我们将 (有误差的)基数估计 注入到不同的数据库系统中，最后比较 有误差和无误差的基数估计 的执行时间。有很少数的query 在使用无误差的估计后 反而更慢了，这是因为 Cost model本身的误差。
 
      观察那些没有在合理时间内执行完的query，它们通常都有共同问题：**当基数估计的非常小时**，PostgreSQL的优化器就会 采用 nested-loop join（因为PostgreSQL 完全基于cost来选择join算法，有可能计算出嵌套循环的cost更小，但这样风险很大 high-risk），然而实际的基数很大。
-    
+   
      另外，当我们**加入其它索引** 如外键 在属性上时，查询优化问题 会变得更困难。当然并不是说 加入索引反而查得变慢了(偶尔会有这样的情况)，整体性能一般都会显著增加，但是 **索引变多，access path就更复杂，优化器也更难优化**。
    
-   - How important is an accurate cost model for the overall query
-     optimization process?
-   
-     Cost model 为 从搜索空间中选择哪些plans 提供了指导。目前系统中的代价模型都很复杂，比如PostgreSQL中的代价模型 超过4000行的C代码，里面考虑到了各种因素，如：部分关联的索引访问、元组大小 等。
-   
-     通过替换 PostgreSQL中的cost model来实验，比如替换的cost function为 简单地只考虑query会产生的元组数。实验证明，**cost model的差别造成的影响 远小于 基数估计误差的影响**。
-   
-     实验中 提出了针对*main-memory*的代价函数，即 不考虑I/O，只考虑 每个operator会得到的元组数目。
-   
+   - How important is an accurate cost model for the overall query optimization process?
+     
+   Cost model 为 从搜索空间中选择哪些plans 提供了指导。目前系统中的代价模型都很复杂，比如PostgreSQL中的代价模型 超过4000行的C代码，里面考虑到了各种因素，如：部分关联的索引访问、元组大小 等。
+     
+   通过替换 PostgreSQL中的cost model来实验，比如替换的cost function为 简单地只考虑query会产生的元组数。实验证明，**cost model的差别造成的影响 远小于 基数估计误差的影响**。
+     
+   实验中 提出了针对*main-memory*的代价函数，即 不考虑I/O，只考虑 每个operator会得到的元组数目。
+     
    - How large does the enumerated plan space need to be?
    
      即 plan enumeration algorithm，有 exhaustive的 也有 heuristic的；它们考虑的 候选计划 数量(即搜索空间大小)不同。
    
      实验使用 一个独立的query optimizer，实现了 DP 以及一系列的启发式算法。实验证明，**基数估计误差 对性能的算法 大于 启发式**，bushy tree的穷举法 比起只对子搜索空间枚举法 对性能的帮助要大一点，但不显著。
-
+   
 5. **Future work**:
    - 更深入的实验，比如 研究复杂的access path 的tradeoff
    - 本文主要基于内存型的设定，可以研究磁盘型的，以及分布式的数据库
