@@ -125,5 +125,16 @@
    
        故对于物理replication的数据库，可以使用高速的RDMA传输 来预热(warm up)缓冲池——使用原主节点的缓冲池内容，通过push或根据需要来fetch。
    
+   ---------------
    
-
+   1. 参考 PolarFS: An Ultra-low Latency and Failure Resilient Distributed File System for Shared Storage Cloud Database
+   
+      PolarDB——存储与计算分离的分布式数据库，PolarFS作为具有低延迟和高可用能力的分布式文件系统，使得PolarDB在分布式多副本架构下仍然能够发挥出极致的性能。
+   
+   2. 存储管理单元分为三层：
+   
+      - Volume: 存放了具体文件系统实例的元数据
+      - Chunk: 数据分布的最小粒度，
+      - Block: Chunk会被进一步划分为多个Block
+   
+   3. PolarFS编译到数据库内核，替换标准的文件系统接口；数据处理在用户空间完成，避免了传统文件系统从内核空间至用户空间的消息传递开销
