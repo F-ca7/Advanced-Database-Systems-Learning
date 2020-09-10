@@ -22,7 +22,7 @@
    - **Operator**：算子级别，比如以下几篇论文
      - **Smooth Scan**: 自适应的access path选择，可以平滑地在**顺序扫描** 和 **索引扫描**之间转化。
      - **G-join**: 将常见的join算法（NL, hash, sort-merge）给合并到一个统一的框架中，从而优化器不用决定选择哪个
-     - **Flow-join**: 用于解决分布式join下的data skew现象。思想是：trade off communication for computation；在初始的运行阶段中，会找到高命中的元组（通过小数据量的近似直方图），再通过**广播**这些元组 来避免失衡
+     - **[Flow-join](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Flow-join.md)**: 用于解决分布式join下的data skew现象。思想是：trade off communication for computation；在初始的运行阶段中，会找到高命中的元组（通过小数据量的近似直方图），再通过**广播**这些元组 来避免失衡
      - **Eddies framework**: 见下篇论文的相关工作
    - **Plan**：粒度提升到整个计划上。当输入的参数值只有运行期才知道时，目前的优化器通常都是 使用有代表性的值（如平均数、中位数）来估计这个参数的分布情况，这样做很容易误差太大
      - **Least Expected Cost**(LEC) plan: 会计算输入参数全分布的期望值。
