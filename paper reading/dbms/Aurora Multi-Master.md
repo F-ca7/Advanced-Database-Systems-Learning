@@ -104,5 +104,26 @@
 
    *Log Record*是由多个master同时产生的，存储节点会检测 写冲突。
 
-9. Instance Read-After-Write：一个事务 可以看到 当前实例上在其之前提交的所有事务，其他节点上已执行的事务（受replication延迟限制）
-10. Regional Read-After-Write ：一个事务可以看到 集群中所有实例上已提交的所有事务
+   ----------
+
+   基于[AWS re:Invent 2019: Amazon Aurora Multi-Master: Scaling out database write performance](https://www.youtube.com/watch?v=p0C0jakzYuc)
+
+   1. 现有的解决方案：
+      - 分布式的lock manager：悲观的同步（重量级锁），对scaling不友好
+      - 全局ordering：引入了一个单点的**Ordering Unit**，是scaling的瓶颈所在
+      - Paxos leader with 2PC：节点间的coordination是重量级的，当事务涉及多个分片时，性能受很大影响
+   2. Aurora 只读节点 与 写节点(Master)的scale out：
+      - 只读节点：写节点会向只读节点发送更新的Page cache，然后只读节点会从共享存储中读取数据 （page cache的更新是** physical delta**）
+      - 写节点：也就是multi-master，所有master实例都能独立地执行写事务，在共享存储层会有乐观的冲突检测；之后master之间会相互发送更新的Page cache
+   3. 三种多节点写的情况：
+      1. No conflict：正常执行
+      1. Physical conflict：（当两个节点的事务修改了同表的同行）两个节点都是独立执行的，期间不需要交流；一个节点提交成功，另一个节点则Rollback，也就是乐观的解决方案
+      1. Logical conflict：当一个节点A修改了表1的一行，它发送page cache更新告诉了节点B，从而节点B知道了这一行被修改了，同时也知道这个事务还没提交。如果此时节点B的客户端要求修改表1的这一行，则会节点B的这个事务会Rollback （传统单机数据库会有一个lock wait，但是Aurora没有分布式的锁）
+   4. 一致性模型：
+      1. Instance Read-After-Write：一个事务可以看到 当前节点已提交事务的结果，以及其他节点上提交的事务（受replication延迟的影响）
+      1. Regional Read-After-Write：一个事务可以看到 当前集群内所有节点已提交事务的结果
+   5. Cluster endpoint：
+      1. 传统的一写多读中，写节点就是endpoint，其他只读节点都follow它；当writer宕机后，某个reader会成为新的writer，原来的writer会变为reader
+      1. 在multi-master中，集群的endpoint是**其中一个可用的writer**，而每个writer实例都有一个**instance endpoint** 指向一个特定的节点。
+   6. Workload：由于写冲突是page级别的，比如两个master指向两个数据库 -> 没问题，或者两个master写同一个数据库的两张表 -> 没问题，或者两个master写同一张表的不同分片 -> 没问题，如果这张表无分片 -> 可能会冲突；所以workload的structure很重要。
+   7. 在information_schema中，可以看到冲突的情况 -> 从而可以看到workload是不是高冲突的
