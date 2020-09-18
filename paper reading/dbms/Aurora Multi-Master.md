@@ -110,10 +110,16 @@
 
    1. 现有的解决方案：
       - 分布式的lock manager：悲观的同步（重量级锁），对scaling不友好
+      
       - 全局ordering：引入了一个单点的**Ordering Unit**，是scaling的瓶颈所在
+      
       - Paxos leader with 2PC：节点间的coordination是重量级的，当事务涉及多个分片时，性能受很大影响
+      
+        注意：Paxos 保证的是多个副本的一致性；2PC保证的是保证跨节点事务的原子性。比如需要考虑2PC的一个问题就是：如果参与者发生故障，需要等待；那么对于2PC协调者单点问题，可以利用Paxos协议解决，当协调者出问题时，选一个新的协调者继续提供服务。
+      
+        所以二者是互补的。
    2. Aurora 只读节点 与 写节点(Master)的scale out：
-      - 只读节点：写节点会向只读节点发送更新的Page cache，然后只读节点会从共享存储中读取数据 （page cache的更新是** physical delta**）
+      - 只读节点：写节点会向只读节点发送更新的Page cache，然后只读节点会从共享存储中读取数据 （page cache的更新是**physical delta**）
       - 写节点：也就是multi-master，所有master实例都能独立地执行写事务，在共享存储层会有乐观的冲突检测；之后master之间会相互发送更新的Page cache
    3. 三种多节点写的情况：
       1. No conflict：正常执行
