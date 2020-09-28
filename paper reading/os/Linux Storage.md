@@ -61,7 +61,7 @@
      | 2.txt | 456     |
      | 3.txt | **789** |
 
-     比如用"rm"命令删除文件时，删除的只是原文件的路径和inode之间的关联，而不是这个inode本身，文件的内容依然存在于磁盘中，，因而只能算是"unlink"。所以直接关联inode的hard link不受影响，而关联原文件路径的soft link此时相当于是一个dangling reference
+     比如用"rm"命令删除文件时，删除的只是原文件的路径和inode之间的关联，而不是这个inode本身，文件的内容依然存在于磁盘中，因而只能算是"unlink"。所以直接关联inode的hard link不受影响，而关联原文件路径的soft link此时相当于是一个dangling reference
 
    注意：硬链接不能link目录，软链接可以。
 
