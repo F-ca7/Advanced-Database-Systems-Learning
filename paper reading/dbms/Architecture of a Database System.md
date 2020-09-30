@@ -254,3 +254,23 @@
    - Snowﬂake Schema Queries的优化
 
      通常有查询“customer X bought product Y from store Z at time T”，有一个**central table** surrounded by dimensions, each with a 1-N primary-key-foreign-key relationship to the fact table，这种称为 *star schema*；而多级的star就变为 *snowﬂake schema*。
+
+8. **集群架构**（根据集群共享的程度：即在哪个层上发生共享，这里考虑两个层：查询处理层、存储引擎层）https://www.jianshu.com/p/9e7f3e387379
+
+   - **Shared Disk Failover**
+
+     适用于所有DBMS。所有的DBMS server连接到共享磁盘的同一个节点，节点之间用SAN（Storage Area Network）互联。
+
+   - **Shared Disk Parallel**
+
+     允许多个节点同时访问共享存储，需要保证缓存的一致性（比如Oracle的RAC）。针对CPU与内存带宽进行扩展。
+
+   - **Shared Nothing Active**
+
+     中间件层拦截所有客户机请求并将其转发到独立副本。只读请求在可用节点之间得到平衡，从而达到系统可扩展的效果。
+
+   - **Shared Nothing Certification-Based**
+
+     在无共享集群，可以使用基于认证协议避免主动复制更新事务。每个事务直接在副本上执行，而没有任何先验协调。因此，事务仅需要根据本地的并发控制协议在本地进行同步。仅在提交之前，协调的过程才开始。这个时候，发起协调的副本采用全序组通信原语广播更新。这将导致所有节点采用完全相同的更新序列，然后通过测试可能的冲突获取认证。
+
+9. 
