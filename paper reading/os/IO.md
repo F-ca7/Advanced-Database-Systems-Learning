@@ -78,7 +78,101 @@
 
      能够处理**耗时长的并发场景**，性能也较好。
 
+8. 
+
 ---------
 
-**Java中的I/O**
+**Java中的文件I/O** (文件IO实践 https://www.cnkirito.moe/file-io-best-practise/)
+
+1. 原生的文件IO读写方式
+
+   - 普通IO: java.io.FileWriter,   java.io.FileReader
+
+   - FileChannel: java.nio.channels.FileChannel，注意 NIO 并不一定意味着非阻塞，这里的FileChannel 就是阻塞的
+
+     `FileChannel channel = new RandomAccessFile(new File("test"), "r").getChannel();`
+
+   - MMAP (内存映射): 由 FileChannel 调用 map 方法衍生出来的一种特殊读写文件的方式
+
+     `MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());`
+
+2. **FileChannel**
+
+   大部分时候是与 **ByteBuffer**类交互，ByteBuffer可视为 字节数组的一个封装类：
+
+   ```java
+   public abstract class ByteBuffer
+       extends Buffer
+       implements Comparable<ByteBuffer>
+   {
+       // These fields are declared here rather than in Heap-X-Buffer in order to
+       // reduce the number of virtual method invocations needed to access these
+       // values, which is especially costly when coding small buffers.
+   
+       final byte[] hb;                  // Non-null only for heap buffers
+       final int offset;
+       boolean isReadOnly;                 // Valid only for heap buffers
+   }
+   ```
+
+   FileChannel的read和write方法是线程安全的，因为在真正读写会通过 synchronize(positionLock) 来进行互斥。
+
+3. 为什么FileChannel比普通IO快？
+
+   1. FileChannel 采用了 ByteBuffer 这样的内存缓冲区，让我们可以非常精准的控制写盘的大小；所以当 FileChannel 在一次写入 4kb 的整数倍（具体数值受 磁盘结构、操作系统、CPU的影响）时，可以发挥出更高的性能
+   2. FileChannel不是把ByteBuffer直接写入磁盘，write方法是先写入PageCache缓存，最后由操作系统将PageCache的数据落盘（所以  FileChannel 也提供了一个 force() 方法，通知操作系统进行及时的刷盘）
+
+4. mmap的MappedByteBuffer 
+
+   断点执行完 `fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, 1024 * 1024)` 后，发现即使不写入数据，磁盘上也会生成一个1M大小的文件（字节全为0）。
+
+   原理如下：
+
+   > mmap 把文件映射到用户空间里的虚拟内存，**省去了从内核缓冲区复制到用户空间的过程**，文件中的位置在虚拟内存中有了对应的地址，可以像操作内存一样操作这个文件，相当于已经把整个文件放入内存，但在真正使用到这些数据前却不会消耗物理内存，也不会有读写磁盘的操作，只有真正使用这些数据时，虚拟内存管理系统 VMS 才根据缺页加载的机制从磁盘加载对应的数据块到物理内存。这样的文件读写文件方式少了数据从内核缓存到用户空间的拷贝，效率很高
+
+5. Java MappedByteBuffer 的三个注意事项
+
+   - MMAP 使用时必须实现指定好内存映射的大小，并且一次 map 的大小限制在 1.5G 左右，重复 map 又会带来虚拟内存的回收、重新分配的问题，对于文件不确定大小的情形不友好
+   - MMAP 使用的是虚拟内存，和 PageCache 一样是由操作系统来控制刷盘的，虽然可以通过 force() 来手动控制，但这个时间把握不好，在小内存场景下很麻烦
+   - 当 MappedByteBuffer 不再需要时，可以手动释放占用的虚拟内存
+
+6. 不管是机械硬盘还是固态硬盘，顺序读写总比随机读写快
+
+   FileChannel多线程的顺序读写 需要在调用时额外进行同步，如
+
+   ```java
+   private synchronized static void syncWrite(FileChannel channel, byte[] data) throws IOException {
+       channel.write(ByteBuffer.wrap(data), writePos);
+       writePos += data.length;
+   }
+   ```
+
+   这是因为多线程并发write且不加同步会导致文件空洞，其执行顺序可能如下：
+
+   1. 线程1写入偏移位置[0, 1024)
+   2. 线程3写入偏移位置[2048, 3072)
+   3. 线程2写入偏移位置[1024, 2048)
+
+   导致不是绝对的顺序写入。
+
+7. 堆内内存 vs 堆外(Direct)内存
+
+   |              | 堆内内存                          | 堆外内存                                                     |
+   | ------------ | --------------------------------- | ------------------------------------------------------------ |
+   | **实现**     | 数组，使用的是JVM堆内存           | unsafe.allocateMemory(size) 返回直接内存                     |
+   | **大小限制** | JVM启动参数-Xms -Xmx              | -XX:MaxDirectMemorySize，以及及其本身的虚拟内存              |
+   | **GC**       | 由垃圾回收器处理                  | 当 DirectByteBuffer 不再被使用时，会出发内部 cleaner 的钩子，保险起见，可以考虑手动回收：((DirectBuffer) buffer).cleaner().clean(); |
+   | **内存复制** | 堆内内存 -> 堆外内存 -> pageCache | 堆外内存 -> pageCache                                        |
+
+   最佳实践：
+
+   - 当需要申请大块的内存时，堆内内存会受到限制，只能分配堆外内存
+   - 堆外内存适用于生命周期中等或较长的对象。(如果是生命周期较短的对象，在 YGC 的时候就被回收了，就不存在大内存且生命周期较长的对象在 FGC 对应用造成的性能影响)
+   - 堆内内存刷盘的过程中，还需要复制一份到堆外内存
+   - 还可以使用池 + 堆外内存 的组合方式，来对生命周期较短，但涉及到 I/O 操作的对象进行堆外内存的再使用 (Netty 中就使用了该方式)。在比赛中，尽量不要出现在频繁 `new byte[]` ，创建内存区域再回收也是一笔不小的开销，使用 `ThreadLocal<ByteBuffer>` 和 `ThreadLocal<byte[]>`
+   - 创建堆外内存的消耗要大于创建堆内内存的消耗，所以当分配了堆外内存之后，**尽可能复用**它
+
+8. 
+
+   
 
