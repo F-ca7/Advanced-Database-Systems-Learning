@@ -11,13 +11,23 @@
    - **设备都认为是文件**（Unix风格）
    - 常见设备文件：
      - /dev/hd[a-t]：IDE设备
-     - /dev/sd[a-z]：SCSI设备
+     
+     - /dev/sd[a-z]：SCSI设备 
+     
+       SCSI硬盘和普通IDE硬盘相比有很多优点：接口速度快，并且由于主要用于服务器，因此硬盘本身的性能也比较高，硬盘转速快，缓存容量大，CPU占用率低，扩展性远优于IDE硬盘，并且支持热插拔
+     
      - /dev/fd[0-7]：标准软驱
+     
      - /dev/loop[0-7]：本地回环设备
+     
      - /dev/ram[0-15]：内存
+     
      - /dev/null：无限数据接收设备,相当于黑洞
+     
      - /dev/zero：无限零资源
+     
      - /dev/tty[0-63]：虚拟终端
+     
      - /dev/ttyS[0-3]：串口
 
 3. I/O调度器：将请求按照对应在块设备上的扇区号进行排列，减少磁头的移动，提高效率。
@@ -78,7 +88,39 @@
 
      能够处理**耗时长的并发场景**，性能也较好。
 
-8. 
+8. **iostat**命令
+
+   从盘的角度看IO，`iostat -x 1 -m`
+
+   给出指标有
+
+   - r/s: 读的次数
+   - w/s: 写的次数
+   - rMB/s: 读流量
+   - wMB/s: 写流量
+   - await: 平均每次I/O操作等待的时间
+   - r_await: 读操作等待时间，如超过5ms级别，可认为比较高，即读压力大
+   - w_await: 写操作等待时间，如超过5ms级别，可认为比较高，即写压力大
+
+9. **iotop**命令
+
+   从线程的角度看IO，可以看各个线程的IO累积量，有没有超出预期，也可反应fsync
+
+10. **iosnoop**工具
+
+    https://github.com/brendangregg/perf-tools/blob/master/iosnoop
+
+    检测磁盘延迟的毛刺
+
+    可以结合[HeatMap](https://github.com/brendangregg/HeatMap)来可视化查看指标
+
+11. fio
+
+    可以用于测试磁盘的指标，包括：
+
+    - 读写带宽
+    - IOPS
+    - 每秒 fsync的上限
 
 ---------
 
