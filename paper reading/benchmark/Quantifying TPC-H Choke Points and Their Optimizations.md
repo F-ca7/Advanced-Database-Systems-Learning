@@ -46,17 +46,107 @@
 
    - **Join依赖谓词的重复**
 
-     [Q7](#Q7)和[Q19](#Q19)中包含
+     [Q7](#Q7)和[Q19](#Q19)中，比如`(n1.n_name = '[NATION1]' and n2.n_name = '[NATION2]') or (n1.n_name = '[NATION2]' and n2.n_name = '[NATION1]')`，这个谓词条件是无法被下推到JOIN下面的，但是可以通过提取 `n_name = '[NATION1]' OR n_name = '[NATION2]'`这个条件 并加到JOIN两端的输入下，可以减小输入的大小。<u>注意：不能算是谓词下推，因为JOIN完后还要再筛选一次，避免两边同时是NATION1或NATION2的情况。</u>
 
-   - 
+     实验表明，对Q7有大幅度提升，Q19有小幅度提升。
+
+   - **物理访问的局部性**
+
+     无理访问在 **l_shipdate**属性上进行过滤，*orders*表在有5个查询在 **o_orderdate**属性上的过滤。所以如果能基于这两个列建聚簇索引可以减少很大的扫描基数。
+
+     实验的baseline是tpch生成的原始表；(1)中对*lineitem*表和*orders*表进行了完全的shuffle；(2)中对两张表分别按上述属性聚簇排列，但DBMS无法感知到，不能提前对扫描剪枝；(3)中DBMS可以感知到两张表的聚簇排列。结果图表如下所示：
+
+     ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20201111_105329.png)
+
+     注意，如[Q18](#Q18)中，对**l_orderkey**的group by操作会对物理局部性产生破坏，所以结果更差了。并且即使不能感知到聚簇的排列，也能比baseline提升性能，是因为 <u>CPU cache局部性更好 且 分支预测错误更少</u>。
+
+   - **相关列**
+
+     比如 *lineitem*表中**l_shipdate**（运送日期） 和 **l_receiptdate**（收货日期）总是相差在30天内，因为有语义上的关联。当然，<u>TPC-H的规范中声明 禁止显式地告知这些信息，但允许DBMS自身去发现这些关联</u>。这样的话，系统可以将一列的剪枝信息 传递给相关联的另一列。
+
+     实验结果表明，允许利用列的相关联性，对[Q10](#Q10)和[Q12](#Q12)有小幅度提升。
+
+     另外，在现实场景中，一般订单的创建也是随时间顺序递增，所以如果主键也是递增的话，这个物理局部性也能被很好地利用。
+
+     *Pushing data-induced predicates through joins in big-data clusters (2019)*中指出可以在join中利用列的关联性，减少访问的数据量。
+
+   - **Flattening Subqueries**
+
+     [Q2](#Q2), [4](#Q4), [17](#Q17), [20](#Q20), [21](#Q21), [22](#Q22) 这六个用到了子查询。
+
+     > **常见情况**
+     >
+     > - A in (subquery)
+     >
+     > - A not in (subquery) 
+     >
+     > - A = (subquery) 
+     >
+     > - NOT exists (subquery) 
+     >
+     > - exists (subquery)
+     >
+     > **Subquery Flattening & Unnesting**
+     >
+     > - Subquery **unnesting** is always done for correlated subqueries with at most one table in the FROM clause, which are used in ANY, ALL and EXISTS.
+     > - An uncorrelated subquery, or a subquery with more than one table in the FROM clause, is **flattened** if it can be decided that the subquery returns at most one row.
+     >
+     > **关联与非关联**
+     >
+     > - **关联子查询**：对于外部查询返回的每一行数据，内部查询都要执行一次。另外，关联子查询的信息流是双向的，外部查询的每行数据传递一个值给子查询，然后子查询为每一行数据执行一次并返回它的记录，之后外部查询根据返回的记录做出决策。
+     >
+     >   即<u>先执行外层查询，再执行内层查询</u>。
+     >
+     > - **关联子查询**：独立于外部查询的子查询，子查询执行完毕后将值传递给外部查询
+     >
+     >   即<u>先执行内层查询，再执行外层查询</u>。
+
+     对于其他工作中提出的子查询优化法，如*Enhanced subquery optimiza-tions in Oracle(2009)* 中提出的 不同子查询类型合并 可以在Q21中应用；*Integration*
+     *of VectorWise with Ingres(2011)* 可以在ALL 语句中使用，但在TPC-H中没有使用场景。
+
+     实验表明，Q2, 17, 20 可以通过 flatten相关联标量子查询 来提升效率，Q4, 21, 22 通过 相关联的EXISTS子查询 来提升效率。
+
+   - **Semi Join简化**
+
+     > semi-join是指semi-join子查询。 当一张表在另一张表找到匹配的记录之后，半连接只返回第一张表中的记录。不管在右表中找到几条匹配的记录，左表也只会返回一条记录，且返回结果不包含右表。半连接通常使用 **IN** 或 **EXISTS** 作为连接条件（本身没有标准 SQL 语句来表示 SEMI JOIN）
+
+     [Q17](#Q17)中，可以在聚合函数之前添加semi join，来提前去掉 不会在最后JOIN中被匹配的行。如下图所示，最后一步JOIN的输入大小减小了1k倍：
+
+     ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20201111_120319.png)
+
+     这种计划层面的优化 是可以和 执行引擎的优化 一起独立使用的(orthogonal)。
+
+   - **子计划reuse**
+
+     [Q2](#Q2), [11](#Q11), [15](#Q15), [17](#Q17), [21](#Q21) 中，比如Q15，在使用两个地方使用了**revenue**视图，，而创建视图的计算就占了80%的开销。而Q21在*lineitem*表上有两个几乎一样的子查询，如果展开的话，可以在join时 共用一个外层的*lineitem*实例。
+
+   - **结果reuse**
+
+     直接cache整个结果。这里是为了整个研究的完整性 才加入的理论分析。
 
 4. 逻辑算子层面瓶颈：
 
+   - **Dependent Group-By Keys**
    
+     如果能通过主键、外键的关系来发现列之间的函数依赖，可以减少基于hash和sort的agg算子开销。可以适用于[Q3](#Q3), [10](#Q10), [18](#Q18)。
+   
+   - **大的IN语句**
+   
+     [Q12](#Q12), [16](#Q16), [19](#Q19), [22](#Q22)中使用了IN常量的语句，在不使用即时编译的DBMS中，通常由三种方式来处理IN表达式：
+   
+     1. 使用解释型的计算。可以处理任意复杂嵌套的表达式，虽然通用性和扩展性很好，但是需要两层循环，还会带来虚方法调用的额外代价
+     2. 把IN的值拆成析取谓词，最后合并结果
+     3. 使用semi join，先把IN的值做哈希，然后再用输入值去probe。但是有建表的代价
+   
+     下图展示了 随IN的列表长度增加，不同方法执行时间的变化：
+   
+     ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20201111_031059.png)
+
+
 
 -----------
 
-TPC-H22个查询参考：
+**TPC-H22个查询参考**：
 
 ## Q1. 
 
