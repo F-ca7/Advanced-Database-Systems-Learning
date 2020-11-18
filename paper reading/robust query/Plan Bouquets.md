@@ -38,11 +38,33 @@
 
       另外提一句，In any system that exploits execution feedback for query optimization, there are issues such as **maintenance policy** for updates, **replacement policy** for the feedback cache etc. 不过这些问题与原文研究的无关，没有深入探讨。
 
-4. **Contribution**:
+4. 核心流程：
 
-   - 
+   ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20201118_121720.png)
 
-5. 不足之处：
+   1. 确定易错的选择率空间
+   2. 生成*POSP*(parametric optimal set of plans)，以及POSP最小代价的函数曲线，称作*PIC*(POSP infimum curve)
+   3. 将*PIC*基于执行代价离散化，从而可以从POSP中识别出最终需要的计划集，称之为Bouquet
+   4. 从第一条（原点算起）代价等高线开始，从当前点在的等高线上的计划开始，执行该计划，并监控执行期间是否达到了预算。若超出预算，则进入下个计划的执行
+
+5. 主要问题：
+
+   1. 如何确定哪个谓词是易错的选择率？
+      - 通过建模好的规则来确定，参考*Efficient Mid-Query Re-Optimization of  Sub-Optimal Query Execution Plans (1998)* 
+   2. 如何生成期望选择率的查询，从而让优化器给出相应执行计划？
+   3. 如何找到POSP？
+   4. 如何保证POSP的计划数不会太多？
+   5. 运行时，如何判断是否达到了预算？如何切换执行计划？
+
+6. 修改数据库的那些模块功能？
+
+   即数据库引擎需要支持：
+
+   - 在查询优化时，注入选择率（对应5.2）
+   - 带预算的部分执行（对应5.5）
+   - 运行时对选择率变化的监控（对应5.5）
+
+7. 不足之处：
 
    - 如果可以知道估计误差比较小，那么事实上把优化器的估计值作为起始点的话 会收敛的更快；所以如果能够先验地知道 比如优化器会低估选择率，bouquet的方法也能够选择该起始点 从而更快收敛
 
