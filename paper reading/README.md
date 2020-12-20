@@ -53,6 +53,8 @@
 - [Learning to Optimize Join Queries With Deep Reinforcement Learning](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/query/Optimize%20Join%20With%20Reinforcement%20Learning.md)
 - [SQLFlow: A Bridge between SQL and Machine Learning](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/query/SQLFlow.md)
 - [Learning State Representations for Query Optimization with Deep Reinforcement Learning](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/query/State%20Representations%20for%20Query%20Optimization.md)
+- [SQL Plan Management](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/query/SQL%20Plan%20Management.md)
+- [Is Query Optimization a solved problem](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/query/Is%20Query%20Optimization%20a%20solved%20problem.md)
 
 ## 众包数据库
 

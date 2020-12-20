@@ -24,5 +24,10 @@
 
   当谓词包含了多个列的filter时，就需要考虑列与列之间的相关联程度。然而很多优化器会假设多个filter之间是相互独立的，也就是 最终选择率 等于 多个filter选择率的积。作者对这个假设的评价是：<u>大部分时候成立，偶尔不成立</u>。在错误的时候，肯定会发生基数的低估(under-estimation)，这一般比高估更严重，因为会导致优化器选择一些基数较少时的特定操作，而实际运行时却发现性能退化很大。
 
-  所以后来很多数据库系统支持 多列统计信息 ***column group statistics***.
+  所以后来很多数据库系统支持 多列统计信息 ***column group statistics***。
+
+  相对应的，学术界也提出了不同的方法来识别schema中 列组合的关联。比如
+
+  - *CORDS: Automatic Discovery of Correlations and Soft Functional Dependencies (2004)*，在查询执行前，会先从数据中进行采样，然后搜索任意两列的关联性。
+  - *Consistent selectivity estimation via maximum entropy (2007)*，其认为*CORDS*只考虑了列与列两两之间的关联（一定程度上也减小了算法的复杂度），而没有三列、四列等作为整体之间的关联。其提出的方案是——使用CORDS的输出作为 应该维护联合统计信息的 *column groups*，从而优化器利用  *column groups*的统计信息 来避免由于独立性假设带来的误差；然后通过查询的feedback机制，来校正错误的选择性估计。
 
