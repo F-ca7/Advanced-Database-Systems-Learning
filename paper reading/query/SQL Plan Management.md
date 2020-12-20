@@ -5,10 +5,18 @@
 1. SPM的三个核心：
    
    - **Plan capture**
+   
+     创建SQL计划的baseline，保存在**SQL Management Base**(SMB)中
+   
    - **Plan selection**
+   
+     保证有baseline的SQL查询只会使用已经Accepted的执行计划，优化器找到的新执行计划会暂时保存会Unaccepted状态
+   
    - **Plan evolution**
    
-2. 使用SPM的查询流程（在Oracle11g中，本质是一种保守的计划选择策略）：
+     对于一条SQL，评估所有Unaccepted状态的执行计划（根据文档，该评估过程在夜间执行，因为本质是要把这些计划跑一边），如果验证为有性能提升，则把对应计划标记为Accepted状态
+   
+2. 使用SPM的查询流程（在Oracle11g中，本质是一种保守的计划选择策略）可参考[Oracle白皮书](https://www.oracle.com/technetwork/database/bi-datawarehousing/twp-sql-plan-mgmt-12c-1963237.pdf)：
 
    1. SQL语句先编译(hard parse)成计划，然后通过CBO优化选出最低代价的执行计划P0
 
