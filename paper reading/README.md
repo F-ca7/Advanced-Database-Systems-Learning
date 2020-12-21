@@ -74,11 +74,12 @@
 
 - [Benchmark](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/benchmark/Benchmark.md)
 - [Quantifying TPC-H Choke Points and Their Optimizations](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/benchmark/Quantifying%20TPC-H%20Choke%20Points%20and%20Their%20Optimizations.md)
+- [Fair Benchmarking Considered Difficult](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/benchmark/Fair%20Benchmarking%20Considered%20Di%EF%AC%83cult.md)
 
 ## Robust Query
 
 - [Flow-join: Adaptive skew handling for distributed joins over high-speed networks](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Flow-join.md)
-
+- [Plan Bouquets](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Plan%20Bouquets.md)
 - [Robust query processing Mission possible](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Robust%20query%20processing%20Mission%20possible.md)
 
 ## 云相关
