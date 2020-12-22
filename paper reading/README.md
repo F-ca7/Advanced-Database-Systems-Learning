@@ -79,7 +79,9 @@
 ## Robust Query
 
 - [Flow-join: Adaptive skew handling for distributed joins over high-speed networks](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Flow-join.md)
+- [Anorexic Plan Diagrams](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Anorexic%20Plan%20Diagrams.md)
 - [Plan Bouquets](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Plan%20Bouquets.md)
+- [Proactive Re-Optimization](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Proactive%20Re-Optimization.md)
 - [Robust query processing Mission possible](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Robust%20query%20processing%20Mission%20possible.md)
 
 ## 云相关
