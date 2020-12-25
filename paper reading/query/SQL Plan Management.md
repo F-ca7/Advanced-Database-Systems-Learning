@@ -68,4 +68,54 @@
    - SPM仅对复杂查询SQL进行处理（可能认为这一类查询退化的可能性更大）；如果是简单查询，不会进入SPM这一阶段
    - 在其SPM中，每个SQL对应的一个baseline中包含一个或多个执行计划。实际使用中，会根据当时的参数选择其中代价最小的执行计划来执行。也就是类似于 PQO（参数化查询优化）问题
 
-5. 
+
+------
+
+### Aurora PG的[Query Plan Management](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.html)
+
+1. **Motivation**：迁移到Aurora postgreSQL的企业用户需要在系统升级或更改时 能有**稳定的性能**。
+
+2. 改变查询执行计划的因素（通常不在预料内）：
+
+   - 优化器统计信息的改变
+   - planner配置参数的更新
+   - schema的改变，比如 增减了索引
+   - 绑定变量的改变
+   - 数据库版本的更新
+
+3. QPM的目标：
+
+   - **计划稳定性**：当系统发生如上述改变时，防止计划的退化
+   - **计划自适应性**：自动检测新的最低代价计划，自动控制新计划何时能够被使用 
+
+4. 工作流程：
+
+   ![](https://d2908q01vomqb2.cloudfront.net/887309d048beef83ad3eabf2a79a64a389ab1c9f/2019/05/31/intro-to-aurora-1.gif)
+
+   1. 还是先由优化器生成SQL对应的最低代价计划P0
+   2. 如果没启用QPM，则直接执行P0；若启用了，则进入下一步
+   3. 先判断是否属于 受管理的SQL语句，不属于则直接执行P0
+   4. 进入计划捕获阶段
+   5. 如果QPM未开启 `use_plan_baselines ` 选项，则执行P0
+   6. 如果P0 不属于存储中的计划，优化器会捕获并保存P0 并且 标记为 unapproved 状态，进入第7步；如果属于（且为approved状态），进入第8步
+   7. 如果P0不是禁用状态，直接执行P0（用户可以手动设置 **直接执行**任何估计成本低于指定阈值的unapproved计划）；如果是的，进入下一步
+   8. 如果这个受管理的SQL语句有对应 已启用且有效的首选计划（**preferred**标记，可能有多个首选计划，会重新估计每个首选计划的代价；注意**preferred**和**approved**是不同的 ），然后优化器会执行最低代价的计划；如果没有首选计划，进入下一步
+   9. 如果不存在或无法重新创建首选计划，则优化器会重新计算每个approved计划的代价，然后选择代价最低的approved计划。如果既没有preferred计划，又没有approved计划，那就只能跑P0了
+
+   整体看来，流程和Oracle的SPM基本类似。
+
+5. [最佳实践](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.BestPractice.html)
+
+   **Proactive**：在验证了新计划确实执行更快后，可以手动置为approved状态，从而主动的防止性能退化。实践如下：
+
+   1. 在**开发环境中**，确定对性能或系统吞吐量影响最大的SQL语句，手动捕获特定SQL语句的计划
+   2. 从开发环境**导出捕获的计划**，并将其**导入到生产环境**中
+   3. 在生产中，运行应用程序并强制使用approved的计划
+   4. 对优化器生成的unapproved计划进行分析，**主动将性能更好的计划设置为approved状态**
+
+   **Reactive**：监视运行中的应用，从而检测导致性能下降的计划；检测到时，可以手动**reject掉**或**修复**错误的计划。
+
+   1. 在应用程序运行时，强制使用受管理的计划，并自动将优化器新发现的计划添加为unapproved计划
+   2. 监控运行中程序可能发生的性能退化
+   3. 发现计划性能退化时，将该计划设置为reject状态。下次优化器运行SQL语句时，会自动忽略reject的计划，并使用其他approved计划
+   4. 如果想对退化的计划进行**修复**，则可以考虑使用pg_hint_plan 扩展来尝试改进计划
