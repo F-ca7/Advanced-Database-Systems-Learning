@@ -62,10 +62,10 @@
 
    > 比如查询过滤条件为 `where a < ?`，假如第一次执行 `Execute` 时用的参数值为 1，此时优化器生成最优的 `IndexScan` 执行计划放入缓存，在后续执行 `Exeucte` 时参数变为 10000，此时 `TableScan` 可能才是更优执行计划，但由于执行计划缓存，执行时还是会使用先前生成的 `IndexScan`
 
-   阿里云的PolarDB-X，其[执行计划管理](https://help.aliyun.com/document_detail/144299.html)也有相应文档。（默认开启plan cache）对于到来的SQL查询，会对SQL做参数化处理，即把常量参数用`?`占位符替换。注意：这里PolarDB-X的**plan cache**和SPM都是用参数化后的SQL语句作为Key（而不是原本的语句）。
+   阿里云的PolarDB-X，其[执行计划管理](https://help.aliyun.com/document_detail/144299.html)也有相应文档。（默认开启plan cache，且这里将SPM与Plan Cache整合在了一起）对于到来的SQL查询，会对SQL做参数化处理，即把常量参数用`?`占位符替换。注意：这里PolarDB-X的**plan cache**和SPM都是用参数化后的SQL语句作为Key（而不是原本的语句）。
 
    - 与Mysql和TiDB不同，plan cache会缓存所有SQL计划
-   - SPM仅对复杂查询SQL进行处理（可能认为这一类查询退化的可能性更大）；如果是简单查询，不会进入SPM这一阶段
+   - SPM仅对复杂查询SQL进行处理（可能认为这一类查询退化的可能性更大）；<u>如果是简单查询，不会进入SPM这一阶段</u>
    - 在其SPM中，每个SQL对应的一个baseline中包含一个或多个执行计划。实际使用中，会根据当时的参数选择其中代价最小的执行计划来执行。也就是类似于 PQO（参数化查询优化）问题
 
 
