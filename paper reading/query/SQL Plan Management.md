@@ -104,7 +104,19 @@
 
    整体看来，流程和Oracle的SPM基本类似。
 
-5. [最佳实践](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.BestPractice.html)
+5. 受管理的语句 (Managed Statement)
+
+   类似于上文polardb-x中提到的参数化语句，这里同样会对SQL语句进行规格化：
+
+   - 去除头部注释块
+   - 去除EXPLAIN相关
+   - 去除尾部多余空格
+   - 去除字面量
+   - 保留token之间的空格 以及原本大小写，方便阅读
+
+   比如，语句`/*Leading comment*/ EXPLAIN SELECT /* Query 1 */ * FROM t WHERE x > 7 AND y = 1;` 会被规格化为 `SELECT /* Query 1 */ * FROM t WHERE x > CONST AND y = CONST; `，最后根据规格化后的语句进行Hash操作。
+
+6. [最佳实践](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.BestPractice.html)
 
    **Proactive**：在验证了新计划确实执行更快后，可以手动置为approved状态，从而主动的防止性能退化。实践如下：
 
