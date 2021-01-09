@@ -52,7 +52,7 @@
    对于PostgreSQL，pg只提供prepared statement的cache（session级别）。（pg对于存储过程也实现了plan cache，PL/sql的解释器会把SQL语句以prepared statement的形式存储）
 
    - 对于无参数的prepared stmt，第一次执行时会生成计划 并 保存到cache中，以后在执行到这个stmt会重用执行计划
-   - 对于带参的prepared stmt，pg采用如下策略（在[德哥的博客](https://github.com/digoal/blog/blob/master/201606/20160617_01.md)中，指出了遮掩顾总可以避免plan cache的倾斜）：
+   - 对于带参的prepared stmt，pg采用如下策略（在[德哥的博客](https://github.com/digoal/blog/blob/master/201606/20160617_01.md)中，指出了这样做可以避免plan cache的倾斜）：
      - 前五次执行时，每次会根据输入的参数来生成执行计划称作custom plan，然后记录下**总的custom plan的代价与数量**。
      - 第六次开始执行时，生成一个不依赖参数的执行计划并保存起来——称作generic plan。如果generic plan的代价小于之前所有custom plan的平均代价的1.1倍，则采用generic plan；否则重新根据参数生成新的custom plan，更新总的custom plan的代价与数量。
 
