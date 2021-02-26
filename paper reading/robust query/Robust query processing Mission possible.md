@@ -38,3 +38,20 @@
    - **Robustness benchmark**: 像TPC-DS的是只测性能；而最近的一些benchmark如**OptMark**, **JOB**, **OTT**也没有考虑robustness的方面
    - **ML for component selection**: 在不同运行的场景下，可以使用不同的组件；但如何根据运行环境去做出选择判断——可以结合机器学习。参考 *F. Hueske. Specification and Optimization of Analytical Data Flows (2016)*.
    - **Graceful** **performance** **degradation**: 现有问题是，当运行环境发生微小的改变时（通常是硬件的资源上，文章没给出具体例子，我的理解是比如可用内存突然变小了，或参考概述前文的environments），性能会急剧退化。如何设计出一个算法，对于其中所有性能相关的参数，都可以优雅地进行降级（该算法需要可以被理论证明的）。
+
+4. 来自 Dagstuhl Seminar (2012)，在当时提出 值得探索的方向
+   - Smooth operations: 可参考 [Smooth Scan](https://github.com/F-ca7/Advanced-Database-Systems-Learning/blob/master/paper%20reading/robust%20query/Smooth%20Scan.md)
+   - Opportunistic query processing: 不是单一地执行一个计划，而是选出多个不同计划并行执行、
+   - Run-time join order selection: 主要是通过利用执行期间得到的中间结果，从而使优化、执行两阶段交织进行，并减小技术估计误差
+   - Robust plans: 通过smooth operator让整个计划能有健壮性的保障（不过这里说的robust plan和我理解的不太相同，有另一种理解是 计划本身具备健壮性，这里是通过smooth operation来进行运行时计划的平滑过渡）
+   - Assessing robustness of query execution plans: 比较执行计划健壮性的指标
+   - Testing adaptive execution: 试着比较 自适应执行方法对性能的影响 以及 基数估计误差带来的性能影响
+   - Pro-active physical design: 通过持续的workload分析，来逐渐地调整数据库的物理设计（核心假设是 workload有共性、周期性）
+   - Adaptive partitioning: 根据当前的workload来调整底层的partition（当然也属于physical design的一部分）
+   - Adaptive resource allocation: 比如运行时的动态内存分配、动态workload调节、自适应地控制并发执行
+   - Physical database design without workload knowledge: 在数据批量导入期间来决定 数据库的物理设计
+   - Weather prediction: 通过分析当前workload，以及当前系统状态的参数，来控制当前系统性能预期
+   -  Lazy parallelization: 静态的优化阶段 给出的并行执行计划是有不小风险的，因为(1) 确切的总工作量是无法预知的；(2) 数据倾斜问题对并行有影响；(3) 运行时的可用资源也是不确定的。所以，可以考虑将是否并行给延到执行阶段决定
+   - Pause and resume: 通过pause与resume，使得 重复或浪费的工作最少（甚至可以通过undo一些操作 来恢复到可以resume的阶段）
+   - Physical database design in query optimization: 将一部分数据库的物理设计 放在查询优化阶段来做。比如把索引创建给延迟到优化阶段，即只有当创建索引有好处时，才会相应地创建
+
