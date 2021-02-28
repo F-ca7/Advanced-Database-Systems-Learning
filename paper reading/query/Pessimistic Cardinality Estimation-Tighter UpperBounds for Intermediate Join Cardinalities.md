@@ -82,7 +82,7 @@
 
      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210227_074759.png)
 
-     令哈希函数为*H(x)*=x%2，因此数组*I* 有4个元素（每个元素可理解为**一个sketch**），分别对应x, y属性值模2等于(0, 0)、(0, 1)、(1, 0)、(1, 1)的情况，最后可求得以下参数
+     令哈希函数为*H(x)*=x%2，因此数组*I* 有4个元素（每个元素可理解为**一个sketch**），分别对应x, y属性值模2等于(0, 0)、(0, 1)、(1, 0)、(1, 1)的情况（可以推论说，hash函数的值域不能太大），最后可求得以下参数
 
      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210227_080310.png)
 
@@ -90,15 +90,78 @@
 
    - **Joint entropy** 联合熵: 信息论中的概念。信息论认为 信息是一种不确定性的度量，与事件的概率相关。**信息熵用来表示每个 符号平均携带多少比特（bit）信息**。而联合熵上与联合分布相关，表示为H(X,Y)=∑∑P(X,Y)·log(P(X,Y))。
 
-5. 具体实现
+     令 Q(x,y,z): R(x, y), S(y,z), T(z,x)表示R、S、T连接后的大小，(X, Y, Z)为对应属性值的三元随机变量（认为**呈均匀分布**）。
 
-   令 Q(x,y,z): R(x, y), S(y,z), T(z,x)表示R、S、T连接后的大小，(X, Y, Z)为对应属性值的三元随机变量（认为**呈均匀分布**）。
+     核心： The size of the query is tied to the joint entropy of all three variables.
 
-   核心： The size of the query is tied to the joint entropy of all three variables.
+     则联合熵 h(X, Y, Z) = log | Q(x, y, z) |。又假设**查询只包含 相等谓词**，可以得到 变量子集熵的上界，即h(X, Y) <= log(c<sub>R</sub>)，h(Y, Z) <= log(c<sub>S</sub>)，h(Z, X) <= log(c<sub>T</sub>)。
 
-   则联合熵 h(X, Y, Z) = log | Q(x, y, z) |。又假设**查询只包含 相等谓词**，可以得到 变量子集熵的上界，即h(X, Y) <= log(c<sub>R</sub>)，h(Y, Z) <= log(c<sub>S</sub>)，h(Z, X) <= log(c<sub>T</sub>)。
+     再根据条件熵（在一定已知条件下）的公式有：
 
-   再根据条件熵（在一定已知条件下）的公式有：
+     h(X | Y) <= log(d<sub>R</sub>[y])，h(Y | Z) <= log(d<sub>S</sub>[z])，h(Z | X) <= log(d<sub>T</sub>[x])
 
-   h(X | Y) <= log(d<sub>R</sub>[y])，h(Y | Z) <= log(d<sub>S</sub>[z])，h(Z | X) <= log(d<sub>T</sub>[x])
+     根据Shearer定理，可以得到熵h(X, Y, Z)的上界：
 
+     ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_120650.png)
+
+     可以将KNS上界表示为：
+
+     ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_120832.png)
+
+5. 具体实现Selection Propagation and
+Preprocessing
+   
+以JOB基准中的查询08c为例（其中实线箭头表示PK-FK的join（箭头指向PK），虚线表示FK-FK的join）：
+   
+![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_121026.png)
+   
+
+   
+接下来分为以下几步：
+   
+   1. **Selection Propagation and Preprocessing**
+   
+      Selection propagation可以帮助消除参与的JOIN属性。这个预处理的时间 比起糟糕的计划选择带来的时间膨胀 就相对小了很多。
+   
+      核心：
+   
+      - 如果参与join条件的属性 还参与了filter条件，就可以把 filter条件给传递到join等值之类的条件。
+      - 外键对应的主键属性，给合并到外键上，从而减小超图的大小
+   
+   2. **Hash Partition Budgeting**
+   
+      主要需要解决这个问题——每个join属性需要用多少个hash桶来装？
+   
+      核心思想：给定一个桶数量阈值*B*（可理解为哈希函数的值域），对于每个定界公式，只计算最多*B*个哈希值组合的上界。
+   
+      以查询Q (x, y, z, w) :- aka (x, y) , ci (y, z) , mc (z, w) , cn (w)为例，可以得到以下两个熵公式
+   
+      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_123914.png)
+   
+      下图则展示了公式7、8对应的哈希桶划分
+   
+      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_123744.png)
+   
+      可以推得性质：增大桶的划分数，可得到越严格的上界。
+   
+      
+   
+   3. **Bound Formula Generation**
+   
+      遍历超图中的 所有表的覆盖集，对于集合中的每个关系 计算其在定界公式中的贡献多大。
+   
+      对于如下超图：
+   
+      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_125646.png)
+   
+      为了覆盖每个点，有以下8种集合覆盖选择：
+   
+      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_125753.png)
+   
+      对于每种覆盖的组合，给出上界的公式如下：
+   
+      ![](https://cchw-1257198376.cos.ap-chengdu.myqcloud.com/test/clipboard_20210228_122005.png)
+   
+      可以看出，式2、3、4、6将查询图分成了非连通图；而1、5、7、8将查询图组合为单链状。
+   
+      其中，只有式2、4、6、8包含了c<sub>cn</sub> (为表`company_name`的count)，所以它们能够从`company_name.country_code`的过滤中 获得更多好处。这是因为 `companyID`是表`company_name`的key，但是选择率不是很良好，所以d<sub>cn</sub><sup>companyID</sup>这一项给出的值基本是1。
